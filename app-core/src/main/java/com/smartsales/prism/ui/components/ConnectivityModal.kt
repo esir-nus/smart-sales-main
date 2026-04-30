@@ -22,11 +22,14 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -78,6 +81,7 @@ private const val ACTION_TETHER_SETTINGS = "android.settings.TETHER_SETTINGS"
 @Composable
 fun ConnectivityModal(
     onDismiss: () -> Unit,
+    isAutoPopup: Boolean = false,
     onNavigateToSetup: () -> Unit = {},
     onNavigateToAddDevice: () -> Unit = {},
     viewModel: ConnectivityViewModel = hiltViewModel()
@@ -92,11 +96,39 @@ fun ConnectivityModal(
     val debugProbeText by viewModel.debugProbeText.collectAsState()
     val debugModeEnabled by viewModel.debugModeEnabled.collectAsState()
     val isWifiMismatchActive = managerState == ConnectivityManagerState.WIFI_MISMATCH
+    val entranceProgress = remember { Animatable(if (isAutoPopup) 0f else 1f) }
+
+    LaunchedEffect(isAutoPopup) {
+        if (isAutoPopup) {
+            entranceProgress.snapTo(0f)
+            entranceProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = 0.78f,
+                    stiffness = Spring.StiffnessLow
+                )
+            )
+        } else {
+            entranceProgress.snapTo(1f)
+        }
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f))
+            .background(
+                if (isAutoPopup) {
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.Black.copy(alpha = 0.78f),
+                            Color(0xFF061018).copy(alpha = 0.76f),
+                            Color.Black.copy(alpha = 0.68f)
+                        )
+                    )
+                } else {
+                    Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.6f), Color.Black.copy(alpha = 0.6f)))
+                }
+            )
             .clickable(enabled = false) {},
         contentAlignment = Alignment.Center
     ) {
@@ -104,9 +136,45 @@ fun ConnectivityModal(
             modifier = Modifier
                 .padding(horizontal = 20.dp, vertical = 48.dp)
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(26.dp))
-                .background(ModalSurface)
-                .border(1.dp, CardBorder, RoundedCornerShape(26.dp))
+                .graphicsLayer {
+                    val progress = entranceProgress.value
+                    alpha = if (isAutoPopup) progress else 1f
+                    scaleX = if (isAutoPopup) 0.92f + 0.08f * progress else 1f
+                    scaleY = if (isAutoPopup) 0.92f + 0.08f * progress else 1f
+                    translationY = if (isAutoPopup) 54f * (1f - progress) else 0f
+                }
+                .then(
+                    if (isAutoPopup) {
+                        Modifier.shadow(
+                            elevation = 28.dp,
+                            shape = RoundedCornerShape(30.dp),
+                            clip = false,
+                            ambientColor = AccentBlue.copy(alpha = 0.24f),
+                            spotColor = CyanDetected.copy(alpha = 0.20f)
+                        )
+                    } else {
+                        Modifier
+                    }
+                )
+                .clip(RoundedCornerShape(if (isAutoPopup) 30.dp else 26.dp))
+                .background(
+                    if (isAutoPopup) {
+                        Brush.verticalGradient(
+                            listOf(
+                                Color(0xFF182533),
+                                ModalSurface,
+                                Color(0xFF101116)
+                            )
+                        )
+                    } else {
+                        Brush.verticalGradient(listOf(ModalSurface, ModalSurface))
+                    }
+                )
+                .border(
+                    width = if (isAutoPopup) 1.2.dp else 1.dp,
+                    color = if (isAutoPopup) CyanDetected.copy(alpha = 0.28f) else CardBorder,
+                    shape = RoundedCornerShape(if (isAutoPopup) 30.dp else 26.dp)
+                )
         ) {
             LazyColumn(
                 modifier = Modifier.padding(20.dp),
@@ -136,6 +204,15 @@ fun ConnectivityModal(
                                 modifier = Modifier.size(16.dp)
                             )
                         }
+                    }
+                }
+
+                if (isAutoPopup) {
+                    item {
+                        AutoPopupIntroCard(
+                            managerState = managerState,
+                            hasDevices = deviceCardPresentations.isNotEmpty()
+                        )
                     }
                 }
 
@@ -252,6 +329,136 @@ private fun NeedsSetupCard(onStartSetup: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 onClick = onStartSetup
             )
+        }
+    }
+}
+
+// ── Auto Popup Intro Card ─────────────────────────────────────
+
+@Composable
+private fun AutoPopupIntroCard(
+    managerState: ConnectivityManagerState,
+    hasDevices: Boolean
+) {
+    val transition = rememberInfiniteTransition(label = "connectivity_auto_popup_intro")
+    val pulseScale by transition.animateFloat(
+        initialValue = 0.86f,
+        targetValue = 1.18f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "connectivity_auto_popup_pulse_scale"
+    )
+    val pulseAlpha by transition.animateFloat(
+        initialValue = 0.24f,
+        targetValue = 0.54f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "connectivity_auto_popup_pulse_alpha"
+    )
+    val title = when (managerState) {
+        ConnectivityManagerState.WIFI_MISMATCH -> "连接需要处理"
+        ConnectivityManagerState.RECONNECTING,
+        ConnectivityManagerState.BLE_PAIRED_NETWORK_UNKNOWN,
+        ConnectivityManagerState.BLE_PAIRED_NETWORK_OFFLINE -> "正在靠近你的徽章"
+        ConnectivityManagerState.CONNECTED -> "徽章已恢复在线"
+        else -> if (hasDevices) "检测到附近徽章" else "准备连接徽章"
+    }
+    val subtitle = when (managerState) {
+        ConnectivityManagerState.WIFI_MISMATCH -> "需要确认 Wi-Fi 后才能继续同步。"
+        ConnectivityManagerState.RECONNECTING -> "正在自动重连，保持徽章在手机附近。"
+        ConnectivityManagerState.BLE_PAIRED_NETWORK_UNKNOWN -> "蓝牙已握手，正在确认网络状态。"
+        ConnectivityManagerState.BLE_PAIRED_NETWORK_OFFLINE -> "蓝牙在线，但徽章还没有可用网络。"
+        ConnectivityManagerState.CONNECTED -> "连接已就绪，可以继续使用徽章能力。"
+        else -> if (hasDevices) "选择一个设备，或等待自动重连完成。" else "先完成配网，之后会自动识别它。"
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        AccentBlue.copy(alpha = 0.28f),
+                        CyanDetected.copy(alpha = 0.14f),
+                        Color.White.copy(alpha = 0.05f)
+                    )
+                )
+            )
+            .border(1.dp, CyanDetected.copy(alpha = 0.25f), RoundedCornerShape(22.dp))
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier.size(52.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            scaleX = pulseScale
+                            scaleY = pulseScale
+                            alpha = pulseAlpha
+                        }
+                ) {
+                    drawCircle(
+                        color = CyanDetected,
+                        radius = size.minDimension / 2.3f,
+                        style = Stroke(width = 2.dp.toPx())
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.13f))
+                        .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Canvas(modifier = Modifier.size(12.dp)) {
+                        drawCircle(color = CyanDetected)
+                        drawCircle(color = Color.White.copy(alpha = 0.5f), radius = 3.dp.toPx())
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "自动提醒",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = CyanDetected,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(Color.Black.copy(alpha = 0.22f))
+                            .border(1.dp, CyanDetected.copy(alpha = 0.22f), RoundedCornerShape(999.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary
+                )
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(
+                    text = subtitle,
+                    fontSize = 12.sp,
+                    color = TextMuted,
+                    lineHeight = 16.sp
+                )
+            }
         }
     }
 }

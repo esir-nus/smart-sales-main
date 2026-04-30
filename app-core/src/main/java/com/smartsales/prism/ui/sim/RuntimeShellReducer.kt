@@ -78,8 +78,13 @@ internal fun openRuntimeAudioDrawer(
     mode.toBaseRuntimeAudioDrawerMode()
 ).mergeInto(state)
 
-internal fun openRuntimeConnectivityModal(state: RuntimeShellState): RuntimeShellState =
-    openBaseRuntimeConnectivityModal(state.toBaseRuntimeShellCoreState()).mergeInto(state)
+internal fun openRuntimeConnectivityModal(
+    state: RuntimeShellState,
+    autoOpened: Boolean = false
+): RuntimeShellState =
+    openBaseRuntimeConnectivityModal(state.toBaseRuntimeShellCoreState())
+        .mergeInto(state)
+        .copy(connectivityModalAutoOpened = autoOpened)
 
 internal fun openRuntimeConnectivitySetup(state: RuntimeShellState): RuntimeShellState =
     openBaseRuntimeConnectivitySetup(state.toBaseRuntimeShellCoreState()).mergeInto(state)
@@ -239,7 +244,12 @@ private fun BaseRuntimeShellCoreState.mergeInto(state: RuntimeShellState): Runti
     audioDrawerMode = toRuntimeAudioDrawerMode(),
     activeConnectivitySurface = toRuntimeConnectivitySurface(),
     showHistory = activeDrawer == BaseRuntimeDrawerType.HISTORY,
-    showSettings = showSettings
+    showSettings = showSettings,
+    connectivityModalAutoOpened = if (activeConnectivitySurface == BaseRuntimeConnectivitySurface.MODAL) {
+        state.connectivityModalAutoOpened
+    } else {
+        false
+    }
 )
 
 private fun RuntimeAudioDrawerMode.toBaseRuntimeAudioDrawerMode(): BaseRuntimeAudioDrawerMode =

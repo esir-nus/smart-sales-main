@@ -436,6 +436,7 @@ internal fun RuntimeShellContent(
             Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
                 ConnectivityModal(
                     onDismiss = { mutateShellState(::closeRuntimeConnectivitySurface) },
+                    isAutoPopup = shellState.connectivityModalAutoOpened,
                     onNavigateToSetup = {
                         mutateShellState { state ->
                             handleRuntimeConnectivitySetupStart(

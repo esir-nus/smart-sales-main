@@ -97,11 +97,12 @@ Rules:
 1. Registry loads the stored active session badge when the stored session still
    belongs to a registered badge.
 2. If stored session state is missing or stale, registry falls back to the
-   latest explicitly connected active badge by `lastConnectedAtMillis`. Default
-   badge status is not an automatic reconnect target.
-3. SessionStore is seeded for that latest active badge before reconnect.
+   latest intended active badge established by successful onboarding pairing,
+   successful add-device pairing, explicit user connect/tap, or explicit device
+   switch. Default badge status is never an automatic reconnect target.
+3. SessionStore is seeded for that latest intended active badge before reconnect.
 4. Manual-disconnect intent suppresses auto reconnect.
-5. Auto reconnect targets the active badge session snapshot.
+5. Auto reconnect targets that latest intended active badge session snapshot.
 6. Reconnect establishes GATT, starts notifications, then performs foreground Wi-Fi status resolution.
 
 Rules:
@@ -117,7 +118,11 @@ Manual reconnect is user-initiated foreground recovery for the active badge.
 
 Rules:
 
-- **MUST:** cancel or supersede stale reconnect and repair UI work.
+- **MUST:** tie reconnect, mismatch, and isolation UI work to live transport plus
+  active badge identity. Stale repair prompts must clear when active shared
+  `Connected` is restored, when the active badge identity changes from any
+  owner, when the user explicitly dismisses/resets the prompt, or when repair
+  completes successfully.
 - **MUST:** await actual connection/query outcome, not fixed-delay polling.
 - **MUST:** route missing or unsafe Wi-Fi credentials to the repair form.
 - **MUST:** keep registry rows intact.
@@ -126,30 +131,47 @@ Rules:
 
 Auto reconnect may start after heartbeat failure, BLE detection of a registered badge, or allowed app relaunch restore.
 
+Latest intended active badge means the most recent badge identity established by
+successful onboarding pairing, successful add-device pairing, explicit user
+connect/tap, or explicit device switch.
+
 Rules:
 
 - **MUST:** respect soft manual disconnect.
-- **MUST:** successful onboarding pairing, successful add-device pairing, and
-  explicit user card tap/switch are the only sources that can mark a badge as
-  the latest active reconnect target.
-- **MUST:** heartbeat failure, app relaunch restore, power loss, distance loss, and other non-manual disconnect recovery target the latest connected active badge session snapshot.
-- **MUST:** BLE detection and reconnect may auto-select only that current/latest active badge. Non-active registered badges may be marked as nearby/reconnectable for UI proximity, but they must not become active without explicit user action.
+- **MUST:** successful onboarding pairing, successful add-device pairing,
+  explicit user connect/tap, and explicit device switch are the only sources
+  that can mark a badge as the latest intended active reconnect target.
+- **MUST:** heartbeat failure, app relaunch restore, power loss, distance loss,
+  and other non-manual disconnect recovery target the latest intended active
+  badge session snapshot.
+- **MUST:** BLE detection and reconnect may auto-select only that latest
+  intended active badge. Non-active registered badges may be marked as
+  nearby/reconnectable for UI proximity, but they must not become active
+  without explicit user action.
 - **MUST:** proximity is per registered badge identity: seeing badge A can mark only A as nearby, seeing badge B can mark only B as nearby, and a badge missing from scan evidence must clear back to not-detected after a short grace window.
 - **MUST:** a manually disconnected badge is not auto-selected by BLE detection.
-- **MUST:** `setDefault()` remains passive/cosmetic UI metadata; default priority must not switch active device, reseed session, or reconnect by itself.
+- **MUST:** `setDefault()` remains passive/cosmetic UI metadata; default priority
+  must not switch active device, reseed session, reconnect by itself, or
+  override the latest intended active badge.
 - **MUST:** reconnect work must stop when the active device changes.
-- **MUST:** surface BLE-detected as proximity only until GATT and network status catch up.
+- **MUST:** surface BLE detection as per-badge proximity. In the modal contract,
+  a non-active detected badge stays chooser-only, while the active
+  BLE-detected-but-not-transport-ready badge remains primarily disconnected;
+  BLE proximity may appear only as secondary detail and must not claim shared
+  transport readiness.
 - **MUST:** manually disconnecting active badge B must not auto-connect nearby badge A and must not auto-reconnect B until the user explicitly reconnects or switches.
 
 Connectivity modal prompting is deterministic:
 
-- If no badge is fully active and detected registered candidates include the
-  latest active badge, the app may auto reconnect only that latest badge and
-  opens the existing `ConnectivityModal` with the latest badge shown as
-  connecting.
-- If detected registered candidates do not include the latest active badge, the
-  app opens the existing `ConnectivityModal` as a chooser and no badge
-  auto-connects until the user taps a card.
+- When no badge is fully active, any eligible registered-badge availability
+  change, including out-of-range to available transitions, opens the existing
+  `ConnectivityModal` deterministically.
+- If eligible detected registered candidates include the latest intended active
+  badge, the app may auto reconnect only that latest badge and opens the modal
+  with that badge shown as connecting.
+- If eligible detected registered candidates do not include the latest intended
+  active badge, the app opens the modal as a chooser and no badge auto-connects
+  until the user taps a card.
 - A manually disconnected badge cannot trigger auto reconnect. By default, it
   also must not trigger the modal by itself, though it may still appear in the
   device list when the modal opens for another eligible detected badge.

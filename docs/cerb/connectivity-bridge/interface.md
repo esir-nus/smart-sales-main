@@ -2,7 +2,7 @@
 
 > **Blackbox contract** — For consumers (Scheduler, Badge Audio Pipeline). Don't read implementation.
 > **Status**: Supporting reference beneath BAKE
-> **Last Updated**: 2026-04-28
+> **Last Updated**: 2026-04-30
 > **BAKE Implementation Contract**: [`docs/bake-contracts/connectivity-badge-session.md`](../../bake-contracts/connectivity-badge-session.md)
 > **Behavioral Source Above This Interface**: [`docs/core-flow/badge-connectivity-lifecycle.md`](../../core-flow/badge-connectivity-lifecycle.md)
 
@@ -189,6 +189,7 @@ sealed class BadgeManagerStatus {
     object BlePairedNetworkUnknown : BadgeManagerStatus()
     object BlePairedNetworkOffline : BadgeManagerStatus()
     data class Ready(val badgeIp: String? = null, val ssid: String? = null) : BadgeManagerStatus()
+    data class HttpDelayed(val badgeIp: String? = null, val ssid: String? = null, val baseUrl: String) : BadgeManagerStatus()
     object BleDetected : BadgeManagerStatus()
     data class Error(val message: String) : BadgeManagerStatus()
 }
@@ -334,27 +335,35 @@ Phone current SSID must not be used as a core reconnect or repair decision input
 `ConnectivityService.updateWifiConfig()` must treat `trim().isEmpty()` on either field as an immediate local error.
 That rejection is a guard rail only: it must not call BLE provisioning, manual repair confirmation, or remembered-network persistence.
 
-`DeviceRegistryManager.setDefault()` is passive/cosmetic registry metadata. The BLE detection monitor may mark each live registered candidate's own `bleDetected` proximity flag, and it must clear missing candidates after a short grace window, but automatic reconnect may target only the latest user-selected active registered badge after non-manual loss. A non-active/default badge must not become active, reseed `SessionStore`, or reconnect unless the user explicitly switches to it. Manual disconnect of the active badge suppresses both auto-reconnect to that badge and auto-connect to any nearby non-active badge until explicit user action.
+`DeviceRegistryManager.setDefault()` is passive/cosmetic registry metadata. The BLE detection monitor may mark each live registered candidate's own `bleDetected` proximity flag, and it must clear missing candidates after a short grace window, but automatic reconnect may target only the latest intended active registered badge after non-manual loss. A non-active/default badge must not become active, reseed `SessionStore`, reconnect, or override that latest intended active badge unless the user explicitly switches to it. When passive or direct BLE evidence contains registered non-active candidates, the registry must emit the L3 evidence line `non-active BLE candidates marked only; active remains <activeMac>` with same-line source, candidate MACs, and non-active candidate MACs. Manual disconnect of the active badge suppresses both auto-reconnect to that badge and auto-connect to any nearby non-active badge until explicit user action.
+
+`ConnectivityModal` must keep BLE-only active cards disconnected-first. Optional BLE-detected copy is secondary proximity detail only; it must not become the primary state, imply shared transport readiness, or unlock connected-only metadata/actions.
+
+`ConnectivityModal` card copy and actions must come from a single live presentation snapshot that combines shared `BadgeConnectionState`, manager diagnostics, active device, sorted registry devices, BLE proximity, battery, firmware, and transient override state. Connected copy, connected dot, battery/firmware metadata, `断开连接`, `检查更新`, and update affordances require current shared `BadgeConnectionState.Connected`; `BadgeManagerStatus.Ready` alone is not enough.
+
+Supporting docs beneath the core-flow and BAKE contract do not bless stale `WIFI_MISMATCH` or suspected-isolation state after live transport or badge ownership changes. Those prompts must clear on active shared `Connected`, any active badge identity change, explicit dismiss/reset, or successful repair completion. Sprint 04-b tracks the current implementation drift.
 
 Launch restore chooses the stored active `SessionStore` badge first. If that
-session is missing or stale, restore falls back to the registered badge with the
-highest `lastConnectedAtMillis`; it must not fall back to `default` as a
-reconnect target.
+session is missing or stale, restore falls back to the latest intended active
+badge established by successful onboarding pairing, successful add-device
+pairing, explicit user connect/tap, or explicit device switch. It must not fall
+back to `default` as a reconnect target.
 
 `ConnectivityViewModel.registeredBadgeAvailabilityRequests` is a UI-layer prompt
 stream distinct from `ConnectivityPrompt.promptWifiMismatch(...)`. It exists so
 `RuntimeShell` can open the existing `ConnectivityModal` deterministically when
-registered BLE candidates appear:
+no badge is fully active and eligible registered-badge availability changes:
 
-- latest active badge detected: auto reconnect only that latest badge and show it
-  as connecting
-- latest active badge absent but other eligible registered badges detected: open
-  the modal as a chooser with no auto-connect
+- latest intended active badge detected: auto reconnect only that latest badge
+  and show it as connecting
+- latest intended active badge absent but other eligible registered badges
+  detected: open the modal as a chooser with no auto-connect
 - only manually disconnected badges detected: do not open the modal by default
 
 Successful onboarding pairing, successful add-device pairing, and explicit user
-card tap/switch are the only operations that update the latest active reconnect
-target. `setDefault()` remains card-order metadata only.
+connect/tap or explicit device switch are the only operations that update the
+latest intended active reconnect target. `setDefault()` remains card-order
+metadata only.
 
 This richer state is for connectivity manager presentation only. Shared shell/history routing must continue to use `connectionState`.
 

@@ -1,0 +1,8 @@
+227:04-30 22:04:03.646 I/SmartSalesConn(15151): [DebugSim] seeded active-only registry default=14:C1:9F:D7:E3:EE active=14:C1:9F:D7:E4:06
+228:04-30 22:04:03.647 I/SmartSalesConn(15151): [L2.5][BEGIN] scenario=CONNECTIVITY_MANUAL_DEFAULT_SUPPRESSION source=connectivity_debug_button ingress=DeviceRegistryManager.handleBleDetectionCandidates authenticity=synthetic_not_physical_ble
+229:04-30 22:04:03.647 I/SmartSalesConn(15151): [DebugSim] BLE detection candidates default=14:C1:9F:D7:E3:EE active=14:C1:9F:D7:E4:06 manuallyDisconnectedDefault=true
+249:04-30 22:04:03.650 I/SmartSalesConn(15151): [L2.5][ASSERT] scenario=CONNECTIVITY_MANUAL_DEFAULT_SUPPRESSION expected=14:C1:9F:D7:E4:06 selected=14:C1:9F:D7:E4:06 defaultBleDetected=true activeBleDetected=true manuallyDisconnectedDefault=true pass=true
+250:04-30 22:04:03.650 I/SmartSalesConn(15151): [L2.5][END] scenario=CONNECTIVITY_MANUAL_DEFAULT_SUPPRESSION result=PASS evidenceClass=L2.5 authenticity=synthetic_not_physical_ble
+251:04-30 22:04:03.650 I/ConnectivityVM(15151): [L2.5][UI] scenario=CONNECTIVITY_MANUAL_DEFAULT_SUPPRESSION result=PASS selected=14:C1:9F:D7:E4:06 expected=14:C1:9F:D7:E4:06 source=connectivity_debug_button authenticity=synthetic_not_physical_ble
+464:04-30 22:04:03.668 D/ConnectivityVM(15151): managerStatus=Connecting managerState=RECONNECTING
+2129:04-30 22:04:04.371 D/ConnectivityVM(15151): managerStatus=Ready managerState=CONNECTED

@@ -195,13 +195,13 @@ internal fun RuntimeShell(
 
     LaunchedEffect(connectivityViewModel) {
         connectivityViewModel.promptRequests.collectLatest {
-            shellState = openRuntimeConnectivityModal(shellState)
+            shellState = openRuntimeConnectivityModal(shellState, autoOpened = true)
         }
     }
 
     LaunchedEffect(connectivityViewModel) {
         connectivityViewModel.registeredBadgeAvailabilityRequests.collectLatest {
-            shellState = openRuntimeConnectivityModal(shellState)
+            shellState = openRuntimeConnectivityModal(shellState, autoOpened = true)
         }
     }
 

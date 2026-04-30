@@ -24,13 +24,25 @@ class SimConnectivityRoutingTest {
         assertEquals(RuntimeAudioDrawerMode.BROWSE, updated.audioDrawerMode)
         assertFalse(updated.showHistory)
         assertFalse(updated.showSettings)
+        assertFalse(updated.connectivityModalAutoOpened)
+    }
+
+    @Test
+    fun `auto opened connectivity modal records automatic launch mode`() {
+        val updated = openRuntimeConnectivityModal(RuntimeShellState(), autoOpened = true)
+
+        assertEquals(RuntimeConnectivitySurface.MODAL, updated.activeConnectivitySurface)
+        assertTrue(updated.connectivityModalAutoOpened)
     }
 
     @Test
     fun `openRuntimeConnectivitySetup uses full screen route without scrim`() {
-        val updated = openRuntimeConnectivitySetup(RuntimeShellState())
+        val updated = openRuntimeConnectivitySetup(
+            RuntimeShellState(connectivityModalAutoOpened = true)
+        )
 
         assertEquals(RuntimeConnectivitySurface.SETUP, updated.activeConnectivitySurface)
+        assertFalse(updated.connectivityModalAutoOpened)
         assertFalse(shouldShowRuntimeShellScrim(updated))
     }
 

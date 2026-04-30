@@ -24,5 +24,6 @@ data class RuntimeShellState(
     val showHistory: Boolean = false,
     val showSettings: Boolean = false,
     val showSchedulerIslandHint: Boolean = true,
-    val isForcedFirstLaunchOnboarding: Boolean = false
+    val isForcedFirstLaunchOnboarding: Boolean = false,
+    val connectivityModalAutoOpened: Boolean = false
 )

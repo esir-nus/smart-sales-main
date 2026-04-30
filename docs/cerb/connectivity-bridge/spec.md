@@ -3,7 +3,7 @@
 > **Cerb-compliant spec** — Prism-safe wrapper for legacy BLE + HTTP connectivity.
 > **OS Layer**: Infrastructure (Layer 1) — Leaf service, no upstream dependencies
 > **Status**: Supporting reference beneath BAKE
-> **Last Updated**: 2026-04-28
+> **Last Updated**: 2026-04-30
 > **BAKE Implementation Contract**: [`docs/bake-contracts/connectivity-badge-session.md`](../../bake-contracts/connectivity-badge-session.md)
 > **Connectivity Lifecycle Authority Above This Doc**: [`docs/core-flow/badge-connectivity-lifecycle.md`](../../core-flow/badge-connectivity-lifecycle.md)
 > **Behavioral UX Authority Above This Doc**: [`docs/core-flow/base-runtime-ux-surface-governance-flow.md`](../../core-flow/base-runtime-ux-surface-governance-flow.md) (`UX.CONNECTIVITY.*`)
@@ -230,9 +230,10 @@ sealed class WavDownloadResult {
 > Internal `WifiProvisionedHttpDelayed` is transport-confirmed/media-delayed. It must not be flattened into feature readiness when the UI is communicating whether audio sync can start. If a future UI needs a direct manager state, add it in code and sync this spec/interface in the same sprint.
 > Debug builds may additionally expose a temporary `断开连接` action in `BLE_PAIRED_NETWORK_*` states for hardware testing convenience; that control must not be treated as a release-surface contract.
 > Closing the connectivity modal/manager clears transient reconnect or mismatch override state so later reopen reflects live manager truth rather than a retained stale repair screen.
+> Supporting docs beneath core-flow and BAKE do not bless stale reconnect, mismatch, or isolation UI after live transport or active badge identity has changed. Those prompts must clear on active shared `Connected`, any active badge identity change, explicit dismiss/reset, or successful repair completion. Sprint 04-b records the remaining implementation delta where current code still lags this law.
 > The modal now renders a frosted glass overlay (matching `SimHomeHeroTokens`) with active device header, registered device list, and per-device management actions. `ConnectivityViewModel` sources device state from `DeviceRegistryManager.registeredDevices` and `DeviceRegistryManager.activeDevice`. Inline rename uses a `DeviceHeader` component with editable text field. Device switch is mutex-protected and routes through `DeviceRegistryManager.switchToDevice()`.
 > Device cards are ordered for wayfinding stability: the default registered badge is pinned first, all non-default badges follow the successful-pairing timeline using `RegisteredDevice.registeredAtMillis` ascending, and `macAddress` breaks ties. Active selection is visual only through the selected card border and active-card content; switching active badges or updating `lastConnectedAtMillis` must not move the card.
-> Registered-badge availability prompts are separate from Wi-Fi mismatch prompts. When BLE proximity detects registered candidates while no badge is fully active, `RuntimeShell` opens the existing `ConnectivityModal`. If the latest active badge is among detected eligible candidates, only that badge may auto reconnect and the modal shows it as connecting. If the latest active badge is absent, the modal opens as a chooser and waits for an explicit card tap.
+> Registered-badge availability prompts are separate from Wi-Fi mismatch prompts. When no badge is fully active, any eligible registered-badge availability change deterministically opens the existing `ConnectivityModal`. If the latest intended active badge is among detected eligible candidates, only that badge may auto reconnect and the modal shows it as connecting. If the latest intended active badge is absent, the modal opens as a chooser and waits for an explicit card tap.
 
 #### Data Flow
 
@@ -252,12 +253,17 @@ BLE detection monitor priority:
 
 - passive registered-MAC scanning marks each registered badge's own `bleDetected` proximity flag independently
 - a registered badge missing from scan evidence clears `bleDetected=false` after a short grace window so stale ready copy does not stick
-- only the latest user-selected active registered badge may trigger automatic reconnect after non-manual loss such as distance loss or power cut
-- latest active badge selection is seeded by successful onboarding pairing, successful add-device pairing, or explicit user card tap/switch; launch fallback uses `SessionStore` first, then `lastConnectedAtMillis`, never `default`
+- only the latest intended active registered badge may trigger automatic reconnect after non-manual loss such as distance loss or power cut
+- when passive or direct BLE candidates include a registered non-active badge, the registry logs `non-active BLE candidates marked only; active remains <activeMac>` with `source=`, `candidates=`, and `nonActiveCandidates=` on the same line for L3 evidence
+- latest intended active badge selection is seeded only by successful onboarding pairing, successful add-device pairing, explicit user connect/tap, or explicit device switch; launch fallback uses `SessionStore` first, then the latest intended active ownership record, never `default`
 - non-active registered badges, including the default badge, remain proximity/card state only until the user manually taps/switches to them
 - a `manuallyDisconnected=true` badge is skipped for automatic reconnect
-- `setDefault()` itself remains cosmetic/passive and must not switch active device, reseed `SessionStore`, or reconnect
+- `setDefault()` itself remains cosmetic/passive and must not switch active device, reseed `SessionStore`, reconnect, or override the latest intended active badge
 - manual disconnect of active badge B suppresses both auto-reconnect to B and auto-connect to nearby badge A until explicit user action
+
+Device-card proximity copy is secondary detail only. An active badge that is BLE-detected but not transport-ready remains primarily disconnected; optional subtitle copy may hint that it was detected and can be retried, but must not replace disconnected-first state or connected transport metadata. Non-active BLE-detected badges remain chooser-only.
+
+Connectivity modal card presentation must be reduced from one live snapshot of shared `BadgeConnectionState`, manager diagnostics, active device, sorted registered devices, BLE proximity, battery, firmware, and transient UI override. The active card may render `已连接`, connected dot, battery/firmware metadata, `断开连接`, `检查更新`, or update affordances only when that same snapshot has shared `BadgeConnectionState.Connected`. A lagging `BadgeManagerStatus.Ready`, battery notification, firmware notification, checking-update state, or update state must not by itself render connected UI when shared state is disconnected, error, setup, BLE-only, paired-network-offline/unknown, or HTTP-delayed.
 
 Registered availability prompt flow:
 
@@ -269,8 +275,9 @@ DeviceRegistryManager.registeredDevices + activeDevice + ConnectivityBridge.conn
 
 Prompt rules:
 
-- latest detected and not manually disconnected: emit prompt, show latest badge as reconnecting, and reconnect only the latest badge
-- latest absent but another non-manually-disconnected registered badge detected: emit prompt as chooser; no auto-connect
+- any eligible availability change while no badge is fully active: emit prompt through the existing modal rather than silently waiting for a manual open
+- latest intended active badge detected and not manually disconnected: emit prompt, show that latest badge as reconnecting, and reconnect only that badge
+- latest intended active badge absent but another non-manually-disconnected registered badge detected: emit prompt as chooser; no auto-connect
 - only manually disconnected badges detected: do not emit availability prompt
 - default badge detection must not reseed `SessionStore`, switch `activeDevice`, or start reconnect by itself
 

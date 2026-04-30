@@ -166,13 +166,23 @@ Closeout must include:
   those assertions to post-subscription device mutations, reran the focused
   suite, and got green.
 - Verification — ran full `:app-core:testDebugUnitTest` and got green. Captured
-  `adb devices` for the attached hardware baseline. Did not execute bounded L3
-  loops A-D in this session, so the sprint remains open for runtime evidence
-  rather than falsely claiming device closure.
+  `adb devices` for the attached hardware baseline.
+- Device loop — built `:app-core:assembleDebug`, installed
+  `app-core/build/outputs/apk/debug/app-core-debug.apk` onto `fc8ede3e`,
+  enabled the debug-gated connectivity probes on-device, and captured
+  installed-debug `platform-runtime/L2.5` artifacts for loop A and loop C.
+  Loop B and loop D remained blocked because this build exposes no deterministic
+  debug ingress for those branches and this session had no bounded physical
+  hardware choreography for honest L3 closure.
+- Physical L3 preparation — authored
+  `docs/projects/bake-transformation/evidence/04-b-connectivity-intent-driven-reconnect-modal-law/run-09-physical-l3-choreography.md`
+  with exact identity fields, manual collaboration items, capture commands,
+  pass criteria, and block criteria for the next physical loops A-D run.
 
 ## 10. Closeout
 
-- **Status**: local gates passed; L3 runtime closure pending
+- **Status**: local gates passed; installed-debug L2.5 loops A/C captured;
+  loop B, loop D, and physical L3 closure pending
 - **Focused verification**:
   - `JAVA_HOME=/home/cslh-frank/jdks/jdk-17.0.11+9 OPENSHIFT_INTERNAL_IP=127.0.0.1 GRADLE_USER_HOME=/tmp/gradle-user-home /home/cslh-frank/.gradle/wrapper/dists/gradle-8.13-bin/5xuhj0ry160q40clulazy9h7d/gradle-8.13/bin/gradle :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.components.connectivity.ConnectivityViewModelTest --tests com.smartsales.prism.ui.components.ConnectivityModalDeviceCardSubtitleTest --tests com.smartsales.prism.data.connectivity.registry.RealDeviceRegistryManagerTest`
   - Result: PASS
@@ -181,19 +191,65 @@ Closeout must include:
   - Result: PASS
 - **ADB baseline**:
   - `adb devices` -> `fc8ede3e device`
+- **Installed-debug runtime capture**:
+  - Build/install:
+    - `JAVA_HOME=/home/cslh-frank/jdks/jdk-17.0.11+9 OPENSHIFT_INTERNAL_IP=127.0.0.1 GRADLE_USER_HOME=/tmp/gradle-user-home /home/cslh-frank/.gradle/wrapper/dists/gradle-8.13-bin/5xuhj0ry160q40clulazy9h7d/gradle-8.13/bin/gradle :app-core:assembleDebug`
+    - `adb install -r app-core/build/outputs/apk/debug/app-core-debug.apk`
+  - Entry-state setup:
+    - Launched `com.smartsales.prism/.MainActivity` with
+      `--ez sim_debug_connectivity_manager true`
+    - Enabled the debug-gated connectivity probe surface on-device before
+      capture so the installed APK exposed the deterministic L2.5 ingress
+  - Loop A (`platform-runtime/L2.5`, latest intended active present):
+    - Artifacts:
+      - `docs/projects/bake-transformation/evidence/04-b-connectivity-intent-driven-reconnect-modal-law/run-07-loop-a-l25-logcat.txt`
+      - `docs/projects/bake-transformation/evidence/04-b-connectivity-intent-driven-reconnect-modal-law/run-07-loop-a-l25-ui.xml`
+      - `docs/projects/bake-transformation/evidence/04-b-connectivity-intent-driven-reconnect-modal-law/run-07-loop-a-l25.png`
+    - Result: PASS for `CONNECTIVITY_ACTIVE_ONLY_DUAL_ADVERTISE`
+    - Positive proof:
+      - logcat includes `[L2.5][BEGIN]`, `[L2.5][ASSERT]`, and
+        `[L2.5][END] ... result=PASS`
+      - selected MAC remains `14:C1:9F:D7:E4:06`
+      - UI probe text shows
+        `L2.5 CONNECTIVITY_ACTIVE_ONLY_DUAL_ADVERTISE: PASS selected=14:C1:9F:D7:E4:06`
+    - Scope note: this is installed-debug app-side routing proof, not physical
+      BLE or full modal-open L3 closure
+  - Loop C (`platform-runtime/L2.5`, manually disconnected default reappears):
+    - Artifacts:
+      - `docs/projects/bake-transformation/evidence/04-b-connectivity-intent-driven-reconnect-modal-law/run-08-loop-c-l25-logcat.txt`
+      - `docs/projects/bake-transformation/evidence/04-b-connectivity-intent-driven-reconnect-modal-law/run-08-loop-c-l25-ui.xml`
+      - `docs/projects/bake-transformation/evidence/04-b-connectivity-intent-driven-reconnect-modal-law/run-08-loop-c-l25.png`
+    - Result: PASS for `CONNECTIVITY_MANUAL_DEFAULT_SUPPRESSION`
+    - Positive proof:
+      - logcat includes `[L2.5][BEGIN]`, `[L2.5][ASSERT]`, and
+        `[L2.5][END] ... result=PASS`
+      - selected MAC remains `14:C1:9F:D7:E4:06`
+      - suppressed default card renders disconnected-first as
+        `已断开 · 点击重连`
+      - UI probe text shows
+        `L2.5 CONNECTIVITY_MANUAL_DEFAULT_SUPPRESSION: PASS selected=14:C1:9F:D7:E4:06`
+    - Scope note: this is installed-debug app-side suppression proof, not
+      physical BLE closure
 - **Tracker summary**: Reconnect ownership is now intent-driven in persisted
   registry state, explicit connect/switch are the only runtime owner-changing
   actions, modal prompting follows eligible detected badges plus latest intent,
   active BLE-only cards stay disconnected-first, and stale mismatch/isolation
   UI clears on connected or active-badge identity changes. Local L1/L2 gates are
-  green; L3 loop A-D artifacts still need a bounded hardware run.
-- **L3 evidence status**:
-  - Loop A: pending runtime capture
-  - Loop B: pending runtime capture
-  - Loop C: pending runtime capture
-  - Loop D: pending runtime capture
-  - Blocker note recorded under
-    `docs/projects/bake-transformation/evidence/04-b-connectivity-intent-driven-reconnect-modal-law/`.
+  green; installed-debug app-side loops A/C are now captured; loop B, loop D,
+  and physical L3 closure still need bounded runtime evidence.
+- **Runtime evidence status**:
+  - Loop A: installed-debug `platform-runtime/L2.5` PASS
+  - Loop B: blocked — no deterministic debug ingress for the
+    latest-intended-absent chooser branch, and no bounded physical two-badge
+    choreography was available in this session
+  - Loop C: installed-debug `platform-runtime/L2.5` PASS
+  - Loop D: blocked — no deterministic debug ingress for stale
+    mismatch/isolation UI plus reconnect-success clearing, and no bounded
+    physical mismatch/isolation repro was available in this session
+  - Physical L3 overall: still open; blocker/status note recorded under
+    `docs/projects/bake-transformation/evidence/04-b-connectivity-intent-driven-reconnect-modal-law/run-01-l3-blocker.md`
+  - Physical L3 runbook:
+    `docs/projects/bake-transformation/evidence/04-b-connectivity-intent-driven-reconnect-modal-law/run-09-physical-l3-choreography.md`
 - **Scoped diff stat**:
   - `DeviceRegistry.kt` +1
   - `DeviceRegistryModels.kt` +22/-1
@@ -207,4 +263,9 @@ Closeout must include:
   - `ConnectivityModalDeviceCardSubtitleTest.kt` +19
   - `docs/bake-contracts/connectivity-badge-session.md` synced with local gap closure plus remaining L3 blocker
   - `docs/projects/bake-transformation/tracker.md` synced to `in-progress` with local-gate status
-  - Evidence files written: `run-01-adb-devices.txt`, `run-01-l3-blocker.md`
+  - Evidence files written: `run-01-adb-devices.txt`, `run-01-l3-blocker.md`,
+    `run-03-debug-enabled-ui.xml`, `run-03-debug-enabled.png`,
+    `run-07-loop-a-l25-logcat.txt`, `run-07-loop-a-l25-ui.xml`,
+    `run-07-loop-a-l25.png`, `run-08-loop-c-l25-logcat.txt`,
+    `run-08-loop-c-l25-ui.xml`, `run-08-loop-c-l25.png`,
+    `run-09-physical-l3-choreography.md`

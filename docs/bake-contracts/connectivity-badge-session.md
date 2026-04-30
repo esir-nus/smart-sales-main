@@ -235,10 +235,22 @@ connectivity and audio owners.
   now clears on active shared `Connected`, active badge identity change from any
   owner, explicit dismiss/reset, and successful repair completion. Focused/full
   unit tests pass.
-- Remaining blocker 2026-04-30: Sprint 04-b still lacks fresh L3 loop A-D
-  runtime artifacts for these reconnect-law branches. `adb devices` proves the
-  attached device is reachable (`fc8ede3e device`), but this session did not
-  execute the bounded hardware loop set, so do not claim runtime closure yet.
+- Updated 2026-04-30: Sprint 04-b now has installed-debug
+  `platform-runtime/L2.5` artifacts for two reconnect-law branches:
+  `CONNECTIVITY_ACTIVE_ONLY_DUAL_ADVERTISE` proves the app-side latest-intended
+  owner stays selected when both registered badges are synthetically detected,
+  and `CONNECTIVITY_MANUAL_DEFAULT_SUPPRESSION` proves a manually disconnected
+  default badge stays suppressed while the intended active badge remains
+  selected. See
+  `docs/projects/bake-transformation/evidence/04-b-connectivity-intent-driven-reconnect-modal-law/run-07-loop-a-l25-logcat.txt`
+  and
+  `docs/projects/bake-transformation/evidence/04-b-connectivity-intent-driven-reconnect-modal-law/run-08-loop-c-l25-logcat.txt`.
+- Remaining blocker 2026-04-30: Sprint 04-b still lacks a deterministic
+  installed-debug ingress for loop B (latest intended active absent -> chooser)
+  and loop D (stale mismatch/isolation UI clears on reconnect success), and it
+  still lacks bounded physical L3 loop A-D choreography. `adb devices` proves
+  the attached device is reachable (`fc8ede3e device`), but do not claim full
+  runtime or physical closure yet.
 
 ## Test Contract
 
